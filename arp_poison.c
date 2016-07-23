@@ -10,9 +10,9 @@
 #include "GetNetworkInfo.h"
 #include "AttackInfo.h"
 
-BYTE gLocalMAC[6];
-BYTE gGatewayIP[4];
-BYTE gGatewayMAC[6];
+extern BYTE gLocalMAC[6];
+extern BYTE gGatewayIP[4];
+extern BYTE gGatewayMAC[6];
 
 void MakeARPReplyPacket(BYTE* localMac, BYTE* victimMac, BYTE* gatewayIP, BYTE* victimIP, BYTE* arpReplyPacket)
 {
@@ -157,6 +157,9 @@ int main(int argc, char** argv)
                 {
                     printf("ARP spoofing to %s\n", userInput);
                 }
+            }
+            else if (userInput[0] == '2') // send arp restore packet
+            {
             }
         }
     }

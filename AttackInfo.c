@@ -24,6 +24,24 @@ int InsertAttackInfo(BYTE* ip, BYTE* mac)
     return result;
 }
 
+int IsInTable(const u_char* ip, BYTE* mac)
+{
+    int result = 0;
+    int i = 0;
+
+    for (; i < ATTACK_TABLE_MAX; i++)
+    {
+        if (!memcmp(gAttackInfoArr[i].ip, ip, 4))
+        {
+            memcpy(mac, gAttackInfoArr[i].mac, 6);
+            result = 1;
+            break;
+        }
+    }
+
+    return result;
+}
+
 int DeleteAttackInfo(BYTE* ip)
 {
     int result = 1;
