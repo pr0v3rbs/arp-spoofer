@@ -16,7 +16,7 @@ void PacketCallback(u_char* args, const struct pcap_pkthdr *header, const u_char
 {
     // check if dst ip is not me.
     // check IPv4
-    //int result = 0;
+    int result = 0;
     if (packet[12] == 0x08 && packet[13] == 0x00) // Type : IPv4
     {
         BYTE victimMAC[4];
@@ -24,6 +24,7 @@ void PacketCallback(u_char* args, const struct pcap_pkthdr *header, const u_char
         if (memcmp(&packet[30], gLocalIP, 4) &&
             IsInTable(&packet[26], victimMAC))
         {
+            printf("send\n");
             u_char temPacket[65536];
             //u_char* temPacket = malloc(header->len);
             if (temPacket)
@@ -40,16 +41,21 @@ void PacketCallback(u_char* args, const struct pcap_pkthdr *header, const u_char
         else if (memcmp(&packet[26], gLocalIP, 4) &&
                 IsInTable(&packet[30], victimMAC))
         {
-            u_char temPacket[65536];
-            //u_char* temPacket = malloc(header->len);
+            printf("receive %d - ", header->len);
+            //u_char temPacket[65536];
+            u_char* temPacket = malloc(header->len);
             if (temPacket)
             {
                 memcpy(temPacket, packet, header->len);
+                printf("%x:%x:%x:%x:%x:%x -> ", temPacket[0], temPacket[1], temPacket[2], temPacket[3], temPacket[4], temPacket[5]);
                 memcpy(temPacket, victimMAC, 6);
                 memcpy(&temPacket[6], gLocalMAC, 6);
+                printf("%x:%x:%x:%x:%x:%x", temPacket[0], temPacket[1], temPacket[2], temPacket[3], temPacket[4], temPacket[5]);
                 // change mac address.
-                pcap_sendpacket(*gPcapHandle, temPacket, header->len);
-                //free(temPacket);
+                result = pcap_sendpacket(*gPcapHandle, temPacket, header->len);
+                printf(" - %d\n", result);
+                if (result == -1) printf("%s\n", pcap_geterr(*gPcapHandle));
+                free(temPacket);
             }
         }
     }
@@ -80,8 +86,8 @@ int InitPcap(pcap_t **handle)
 
     if (pcap_lookupnet(dev, &net, &mask, errbuf) != -1)
     {
-        *handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
-        //*handle = pcap_open_live(dev, BUFSIZ, 0, 1000, errbuf);
+        //*handle = pcap_open_live(dev, BUFSIZ, 1, 0, errbuf);
+        *handle = pcap_open_live(dev, BUFSIZ, 0, 0, errbuf);
         if (*handle)
         {
             if (pthread_attr_init(&attr) == 0 &&
