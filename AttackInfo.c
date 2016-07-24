@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "AttackInfo.h"
+#include "Print.h"
 
 int InsertAttackInfo(BYTE* ip, BYTE* mac)
 {
@@ -31,7 +32,8 @@ int IsInTable(const u_char* ip, BYTE* mac)
 
     for (; i < ATTACK_TABLE_MAX; i++)
     {
-        if (!memcmp(gAttackInfoArr[i].ip, ip, 4))
+        if (gAttackInfoArr[i].set == 1 &&
+            !memcmp(gAttackInfoArr[i].ip, ip, 4))
         {
             memcpy(mac, gAttackInfoArr[i].mac, 6);
             result = 1;
@@ -42,22 +44,63 @@ int IsInTable(const u_char* ip, BYTE* mac)
     return result;
 }
 
-int DeleteAttackInfo(BYTE* ip)
+void PrintAttackInfo()
 {
-    int result = 1;
     int i = 0;
+    int idx = 1;
+    for (; i < ATTACK_TABLE_MAX; i++)
+    {
+        if (gAttackInfoArr[i].set == 1)
+        {
+            printf("%d. ", idx++);
+            PrintIP("", gAttackInfoArr[i].ip, "\n");
+        }
+    }
+}
+
+int GetAttackInfo(int userIdx, BYTE* ip, BYTE* mac)
+{
+    int result = -1;
+    int i = 0;
+    int idx = 1;
 
     for (; i < ATTACK_TABLE_MAX; i++)
     {
-        if (!memcmp(gAttackInfoArr[i].ip, ip, 4))
+        if (gAttackInfoArr[i].set == 1)
         {
-            gAttackInfoArr[i].set = 0;
-            break;
+            if (idx == userIdx)
+            {
+                memcpy(ip, gAttackInfoArr[i].ip, 4);
+                memcpy(mac, gAttackInfoArr[i].mac, 6);
+                result = 0;
+                break;
+            }
+            idx++;
         }
     }
 
-    if (i == ATTACK_TABLE_MAX)
-        result = 0;
+    return result;
+}
+
+int DeleteAttackInfo(int userIdx)
+{
+    int result = -1;
+    int i = 0;
+    int idx = 1;
+
+    for (; i < ATTACK_TABLE_MAX; i++)
+    {
+        if (gAttackInfoArr[i].set == 1)
+        {
+            if (idx == userIdx)
+            {
+                gAttackInfoArr[i].set = 0;
+                result = 0;
+                break;
+            }
+            idx++;
+        }
+    }
 
     return result;
 }

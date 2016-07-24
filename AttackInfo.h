@@ -20,6 +20,10 @@ int InsertAttackInfo(BYTE* ip, BYTE* mac);
 
 int IsInTable(const u_char* ip, BYTE* mac);
 
-int DeleteAttackInfo(BYTE* ip);
+void PrintAttackTable();
+
+int GetAttackInfo(int userIdx, BYTE* ip, BYTE* mac);
+
+int DeleteAttackInfo(int userIdx);
 
 #endif // ATTACK_INFO_H

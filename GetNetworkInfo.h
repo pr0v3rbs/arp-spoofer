@@ -7,6 +7,8 @@
 
 typedef unsigned char BYTE;
 
+int GetLocalIPAddress(/*out*/ BYTE* ip);
+
 int GetLocalMacAddress(/*out*/ BYTE* mac);
 
 int ConvertAddrToByteIP(/*in*/ char* addr, /*out*/ BYTE* ip);

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pcap.h>
+#include <arpa/inet.h>
 #include "AttackInfo.h"
 #include "GetNetworkInfo.h"
 
@@ -39,6 +41,39 @@ int ConvertAddrToByteIP(/*in*/ char* addr, /*out*/ BYTE* ip)
     }
 
     return result;
+}
+
+int GetLocalIPAddress(/*out*/ BYTE* ip)
+{
+    pcap_if_t *alldevs;
+    pcap_if_t *d;
+    pcap_addr_t *a;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    int status = pcap_findalldevs(&alldevs, errbuf);
+    if(status == 0)
+    {
+        for (d=alldevs; d!=NULL; d=d->next)
+        {
+            if (!strcmp(d->name, "eth0"))
+            {
+                for (a=d->addresses; a!=NULL; a=a->next)
+                {
+                    if (a->addr->sa_family == AF_INET)
+                    {
+                        memcpy(ip, &(((struct sockaddr_in*)a->addr)->sin_addr), 4);
+                    }
+                }
+            }
+        }
+
+        pcap_freealldevs(alldevs);
+    }
+    else
+    {
+        fprintf(stderr, "pcap_findalldevs fail : %s\n", errbuf);
+    }
+
+    return status;
 }
 
 int GetLocalMacAddress(/*out*/ BYTE* mac)
