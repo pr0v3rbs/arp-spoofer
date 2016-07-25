@@ -15,6 +15,7 @@ BYTE gLocalMac[MAC_LEN];
 BYTE gGatewayIp[IP_LEN];
 BYTE gGatewayMac[MAC_LEN];
 BYTE gLocalIp[IP_LEN];
+char* gDeviceName;
 
 void MakeArpReplyPacket(BYTE* localMac, BYTE* victimMac, BYTE* arpSenderMac, BYTE* arpSenderIp, BYTE* arpTargetIp, BYTE* packet)
 {
@@ -123,15 +124,14 @@ int InitPcap(pcap_t **handle)
 {
     bpf_u_int32 mask;
     bpf_u_int32 net;
-    char dev[] = "eth0";
     char errbuf[PCAP_ERRBUF_SIZE];
     pthread_t threadId;
     pthread_attr_t attr;
     int status;
 
-    if ((status = pcap_lookupnet(dev, &net, &mask, errbuf)) == 0)
+    if ((status = pcap_lookupnet(gDeviceName, &net, &mask, errbuf)) == 0)
     {
-        *handle = pcap_open_live(dev, BUFSIZ, 0, 0, errbuf);
+        *handle = pcap_open_live(gDeviceName, BUFSIZ, 0, 0, errbuf);
         if (*handle)
         {
             if ((status = pthread_attr_init(&attr)) == 0)

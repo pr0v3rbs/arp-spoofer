@@ -6,6 +6,8 @@
 #include <arpa/inet.h>
 #include "GetNetworkInfo.h"
 
+extern char* gDeviceName;
+
 BYTE ConvertStrToByte(char c1, char c2)
 {
     BYTE numHigh, numLow;
@@ -49,28 +51,37 @@ int GetLocalIpAddress(/*out*/ BYTE* ip)
     pcap_if_t *d;
     pcap_addr_t *a;
     char errbuf[PCAP_ERRBUF_SIZE];
-    int status = pcap_findalldevs(&alldevs, errbuf);
-    if(status == 0)
+    int status = -1;
+
+    gDeviceName = pcap_lookupdev(errbuf);
+    if (gDeviceName)
     {
-        for (d = alldevs; d != NULL; d = d->next)
+        if((status = pcap_findalldevs(&alldevs, errbuf)) == 0)
         {
-            if (!strcmp(d->name, "eth0"))
+            for (d = alldevs; d != NULL; d = d->next)
             {
-                for (a = d->addresses; a != NULL; a = a->next)
+                if (!strcmp(d->name, gDeviceName))
                 {
-                    if (a->addr->sa_family == AF_INET)
+                    for (a = d->addresses; a != NULL; a = a->next)
                     {
-                        memcpy(ip, &(((struct sockaddr_in*)a->addr)->sin_addr), IP_LEN);
+                        if (a->addr->sa_family == AF_INET)
+                        {
+                            memcpy(ip, &(((struct sockaddr_in*)a->addr)->sin_addr), IP_LEN);
+                        }
                     }
                 }
             }
-        }
 
-        pcap_freealldevs(alldevs);
+            pcap_freealldevs(alldevs);
+        }
+        else
+        {
+            fprintf(stderr, "pcap_findalldevs fail : %s\n", errbuf);
+        }
     }
     else
     {
-        fprintf(stderr, "pcap_findalldevs fail : %s\n", errbuf);
+        fprintf(stderr, "pcap_lookupdev fail : %s\n", errbuf);
     }
 
     return status;
