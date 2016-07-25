@@ -120,7 +120,7 @@ int GetMacAddress(/*in*/ char* ipStr, /*out*/ BYTE* mac)
     char command[100];
     char data[17];
 
-    sprintf(command, "arping -I %s -c 1 | egrep -io \"([0-9a-fA-F]{2}[:]){5}([0-9a-fA-F]{2})\"", gDeviceName);
+    sprintf(command, "arping -I %s %s -c 1 | egrep -io \"([0-9a-fA-F]{2}[:]){5}([0-9a-fA-F]{2})\"", gDeviceName, ipStr);
 
     fp = popen(command, "r");
     if (fp && fread(data, 17, 1, fp) > 0)
