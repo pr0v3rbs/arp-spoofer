@@ -92,8 +92,11 @@ int GetLocalMacAddress(/*out*/ BYTE* mac)
     int result = 0;
     FILE* fp;
     char macStr[17] = "";
+    char command[100];
 
-    if (fp = popen("ifconfig eth0 | egrep -io \"([0-9a-fA-F]{2}[:]){5}([0-9a-fA-F]{2})\"", "r"))
+    sprintf(command, "ifconfig %s | egrep -io \"([0-9a-fA-F]{2}[:]){5}([0-9a-fA-F]{2})\"", gDeviceName);
+
+    if (fp = popen(command, "r"))
     {
         if (fread(macStr, 17, 1, fp) > 0)
         {
@@ -114,11 +117,10 @@ int GetMacAddress(/*in*/ char* ipStr, /*out*/ BYTE* mac)
 {
     int result = 0;
     FILE* fp;
-    char command[100] = "arping -I eth0 ";
+    char command[100];
     char data[17];
 
-    strcat(command, ipStr);
-    strcat(command, " -c 1 | egrep -io \"([0-9a-fA-F]{2}[:]){5}([0-9a-fA-F]{2})\"");
+    sprintf(command, "arping -I %s -c 1 | egrep -io \"([0-9a-fA-F]{2}[:]){5}([0-9a-fA-F]{2})\"", gDeviceName);
 
     fp = popen(command, "r");
     if (fp && fread(data, 17, 1, fp) > 0)
