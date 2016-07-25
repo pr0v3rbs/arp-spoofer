@@ -1,9 +1,9 @@
+#include "std.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <pcap.h>
 #include <arpa/inet.h>
-#include "AttackInfo.h"
 #include "GetNetworkInfo.h"
 
 BYTE ConvertStrToByte(char c1, char c2)
@@ -27,7 +27,7 @@ BYTE ConvertStrToByte(char c1, char c2)
     return (numHigh << 4) + numLow;
 }
 
-int ConvertAddrToByteIP(/*in*/ char* addr, /*out*/ BYTE* ip)
+int ConvertAddrToByteIp(/*in*/ char* addr, /*out*/ BYTE* ip)
 {
     int result = 0;
     struct in_addr structAddr;
@@ -43,7 +43,7 @@ int ConvertAddrToByteIP(/*in*/ char* addr, /*out*/ BYTE* ip)
     return result;
 }
 
-int GetLocalIPAddress(/*out*/ BYTE* ip)
+int GetLocalIpAddress(/*out*/ BYTE* ip)
 {
     pcap_if_t *alldevs;
     pcap_if_t *d;
@@ -52,15 +52,15 @@ int GetLocalIPAddress(/*out*/ BYTE* ip)
     int status = pcap_findalldevs(&alldevs, errbuf);
     if(status == 0)
     {
-        for (d=alldevs; d!=NULL; d=d->next)
+        for (d = alldevs; d != NULL; d = d->next)
         {
             if (!strcmp(d->name, "eth0"))
             {
-                for (a=d->addresses; a!=NULL; a=a->next)
+                for (a = d->addresses; a != NULL; a = a->next)
                 {
                     if (a->addr->sa_family == AF_INET)
                     {
-                        memcpy(ip, &(((struct sockaddr_in*)a->addr)->sin_addr), 4);
+                        memcpy(ip, &(((struct sockaddr_in*)a->addr)->sin_addr), IP_LEN);
                     }
                 }
             }
@@ -133,7 +133,7 @@ int GetMacAddressFromByte(/*in*/ BYTE* ip, /*out*/ BYTE* mac)
     return GetMacAddress(ipStr, mac);
 }
 
-int GetGatewayIP(/*out*/ BYTE* ip)
+int GetGatewayIp(/*out*/ BYTE* ip)
 {
     int result = 0;
     FILE* fp;
@@ -144,7 +144,7 @@ int GetGatewayIP(/*out*/ BYTE* ip)
     {
         if (getline(&line, &len, fp) != -1)
         {
-            if (ConvertAddrToByteIP(line, ip))
+            if (ConvertAddrToByteIp(line, ip))
             {
                 result = 1;
             }

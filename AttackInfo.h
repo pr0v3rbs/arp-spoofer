@@ -1,24 +1,23 @@
 #ifndef ATTACK_INFO_H
 #define ATTACK_INFO_H
 
-typedef unsigned char BYTE;
-typedef unsigned char u_char;
-
 #define ATTACK_TABLE_MAX 10
 
 struct AttackInfo
 {
     int set;
-    BYTE ip[4];
-    BYTE mac[6];
+    BYTE ip[IP_LEN];
+    BYTE mac[MAC_LEN];
 };
 
-struct AttackInfo gAttackInfoArr[10];
+struct AttackInfo gAttackInfoArr[ATTACK_TABLE_MAX];
 struct AttackInfo gateway;
 
 int InsertAttackInfo(BYTE* ip, BYTE* mac);
 
-int IsInTable(const u_char* ip, BYTE* mac);
+int IsIpInTable(/*in*/ const u_char* ip, /*out*/ BYTE* mac);
+
+int IsMacInTable(const u_char* mac);
 
 void PrintAttackTable();
 
